@@ -45,6 +45,7 @@ PARSER_BEGIN(NameParse)
    }
 PARSER_END(NameParse)
 
+TOKEN : { < HYBRID: "×" > }
 SKIP : { " " |  "\t" | "\r" | "\n" }
 TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > }
 TOKEN : { < LWORD : (<LOWER>)+ > }
@@ -60,7 +61,7 @@ TOKEN : { < AUTHORSHIP :
    | "("<NAMESETYEAR>")"([" "])*<NAMESETYEAR>
 >
 | 
-< #NAMESETYEAR : <NAMESET>(<YEARBIT>){0,1} >
+< #NAMESETYEAR : <NAMESET>(<YEARBIT>)*  >
 |
 < #NAMESET : <NAME><AND><NAME> | <NAME>((<COMMA>){0,1}([" "])*<NAME>)+<AND><NAME> | <NAME> > 
 |
@@ -93,6 +94,7 @@ Map<String,String> Parse() :
 {  
    Token t;
    String genus;
+   Boolean namedHybrid;
    String subgenus;
    String species;
    String subspecies;
@@ -102,7 +104,6 @@ Map<String,String> Parse() :
    HashMap<String,String> result = new HashMap<String,String>();
 }
 {
-    //LOOKAHEAD(4)
     genus = Genus()
     (
       t = <AUTHORSHIP>
@@ -115,10 +116,7 @@ Map<String,String> Parse() :
       t = <LWORD>
       { species = t.toString(); } 
     )
-    (
-      t = <AUTHORSHIP>
-      { authorship = t.toString(); } 
-    )
+    authorship = Authorship()
     <EOF>
     { 
       result.put("Genus",genus);
@@ -128,16 +126,31 @@ Map<String,String> Parse() :
       return result ;
     }
   | 
-    //LOOKAHEAD(5)
+    genus = Genus()
+    (
+      t = <HYBRID>
+      { namedHybrid = true; } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Authorship",authorship); 
+      result.put("NamedHybrid","true"); 
+      return result ;
+    }
+  | 
     genus = Genus()
     (
       t = <LWORD>
       { species = t.toString(); } 
     )
-    (
-      t = <AUTHORSHIP>
-      { authorship = t.toString(); } 
-    )
+    authorship = Authorship()
     <EOF>
     { 
       result.put("Genus",genus);
@@ -146,7 +159,6 @@ Map<String,String> Parse() :
       return result ;
     }
   | 
-    //LOOKAHEAD(6)
     genus = Genus()
     (
       t = <LWORD>
@@ -160,16 +172,14 @@ Map<String,String> Parse() :
       t = <LWORD>
       { subspecies = t.toString(); } 
     )
-    (
-      t = <AUTHORSHIP>
-      { authorship = t.toString(); } 
-    )
+    authorship = Authorship()
     <EOF>
     { 
       result.put("Genus",genus);
       result.put("Species",species); 
       result.put("Subspecies",subspecies); 
       result.put("Rank",rank); 
+      if (rank.startsWith("notho")) { result.put("NamedHybrid","true"); }
       result.put("Authorship",authorship); 
       return result ;
     }
@@ -184,10 +194,7 @@ Map<String,String> Parse() :
       t = <LWORD>
       { subspecies = t.toString(); } 
     )
-    (
-      t = <AUTHORSHIP>
-      { authorship = t.toString(); } 
-    )
+    authorship = Authorship()
     <EOF>
     { 
       result.put("Genus",genus);
@@ -225,10 +232,7 @@ Map<String,String> Parse() :
          if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; authorship = t.toString(); }
       }
     )
-    (
-      t = <AUTHORSHIP>
-      { authorship = authorship + " " + t.toString(); authorship = authorship.trim();  } 
-    )
+    authorship = Authorship()
     <EOF>
     { 
       result.put("Genus",genus);
@@ -250,12 +254,10 @@ Map<String,String> Parse() :
       return result ;
     }
   | 
-    //LOOKAHEAD(2)
     genus = Genus()
     (
-      t = <AUTHORSHIP>
+      subgenus = Authorship()
       { 
-        subgenus = t.toString(); 
         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { 
            if (subgenus.matches("[(][A-Z][a-z]+[)].+")) {
                authorship=subgenus.substring(subgenus.indexOf(")")+1).trim(); 
@@ -275,8 +277,48 @@ Map<String,String> Parse() :
       if (authorship.length()>0) { result.put("Authorship",authorship); }
       return result ;
     }
+  | 
+    (
+      t = <HYBRID>
+      { namedHybrid = true; } 
+    )
+    genus = Genus()
+    (  
+      subgenus = Authorship()
+      { 
+        if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { 
+           if (subgenus.matches("[(][A-Z][a-z]+[)].+")) {
+               authorship=subgenus.substring(subgenus.indexOf(")")+1).trim(); 
+               subgenus=subgenus.substring(0,subgenus.indexOf(")")+1).trim(); 
+           } else {  
+               authorship=subgenus; subgenus=""; 
+           }
+        } else { 
+           authorship=""; 
+        } 
+      }
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      if (authorship.length()>0) { result.put("Authorship",authorship); }
+      result.put("NamedHybrid","true"); 
+      return result ;
+    }
   |
-    //LOOKAHEAD(2)
+    (
+      t = <HYBRID>
+      { namedHybrid = true; } 
+    )
+    genus = Genus()
+    <EOF>
+       { 
+         result.put("Genus",genus); 
+         result.put("NamedHybrid","true"); 
+         return result ;
+       } 
+  |
     genus = Genus()
     <EOF>
        { 
@@ -298,3 +340,19 @@ String Genus() :
     ) 
 }
 
+String Authorship() : 
+{
+    Token t;
+    String authorship;
+}
+{
+    (
+      t = <AUTHORSHIP>
+      { authorship = t.toString(); return authorship; } 
+    )
+    |
+    (
+      t = <UWORD>
+      { authorship = t.toString(); return authorship; } 
+    )
+}
