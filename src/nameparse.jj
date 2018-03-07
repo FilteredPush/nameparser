@@ -2,7 +2,10 @@
 options {
    STATIC = false ;
    UNICODE_INPUT = true;
-   LOOKAHEAD = 5;
+   LOOKAHEAD = 6;
+   //DEBUG_PARSER = true;
+   //DEBUG_LOOKAHEAD = true;
+   //DEBUG_TOKEN_MANAGER= true;
 }
 PARSER_BEGIN(NameParse)
    // package org.filteredpush.sciname.parser;
@@ -45,16 +48,18 @@ PARSER_BEGIN(NameParse)
    }
 PARSER_END(NameParse)
 
-TOKEN : { < HYBRID: "×" > }
 SKIP : { " " }
-TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > }
-TOKEN : { < LWORD : (<LOWER>)+ > }
-TOKEN : { < #UPPER: ["A"-"Z"] > }
-TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" > }
-TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
-TOKEN : { < YEAR : (["0"-"9"]){4} > }
-TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
-TOKEN : { < AUTHORSHIP :
+TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
+<NOTSTARTOFLINE>SKIP : { " " }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }
+<NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #UPPER: ["A"-"Z"] > }
+<NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" > }
+<NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
+<NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} > }
+<NOTSTARTOFLINE>TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-"] > }
+<NOTSTARTOFLINE>TOKEN : { < AUTHORSHIP :
    "("<NAMESETYEAR>")"
    | <NAMESETYEAR>
    | "("<NAMESETYEAR>")"([" "])*<NAMESETYEAR>
@@ -62,17 +67,17 @@ TOKEN : { < AUTHORSHIP :
 | 
 < #NAMESETYEAR : <NAMESET>(<YEARBIT>)*  >
 |
-< #AND : " & " | " and " | " et " | " in " | " ex " > 
+< #AND : " & " | " and " | " et " | " in " | " ex " | ": " | "," | ", " > 
+| 
+< #NAMESET: <NAME>((<AND>){0,1}<NAME>)* >
 |
-< #NAMESET : (<NAME><AND><NAME>)+ | (<NAME>((<COMMA>){0,1}([" "])*<NAME>)+<AND><NAME>)+ | <NAME> > 
-|
-< #NAME : (<INITIALS>){0,1}(<PREFIX>){0,1}<WORD>(<SUFFIX>){0,1}  > 
+< #NAME : (<INITIALS>)*(<PREFIX>){0,1}<WORD>(<SUFFIX>){0,1} | <WORD>" "<WORD> > 
 |
 < #INITIALS : (<UPPER>(["."," "])+)+ >
 |
-< #WORD : <UWORD> | <UALPHA>(<LALPHAPUNC>)+ |  (<LALPHA>|<UALPHA>)["'"]<UALPHA>(<LALPHAPUNC>)+  > 
+< #WORD : <UWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'"]<UALPHA>(<LALPHAPUNC>)+  > 
 |
-< #PREFIX : "von " | "[" | ["D","d"]"e " >
+< #PREFIX : "v"["o","a"]"n " | "[" | ["D","d"]"e "  | "de la " | "v"["a","o"]"n de"["n","r"]" " >
 |
 < #SUFFIX : " I"(["I"])+ | " et al." | "]" >
 |
@@ -82,9 +87,8 @@ TOKEN : { < AUTHORSHIP :
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
-< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ñ","ò","ó","ô","õ","ö","ù","ú","û","ü","ý","ÿ"]  >
+< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ñ","ò","ó","ô","õ","ö","ù","ú","û","ü","ý","ÿ","ç"]  >
 }
-TOKEN : { < #LOWER : ["a"-"z","-"] > }
 
 Map<String,String> Parse() :
 {  
@@ -94,12 +98,27 @@ Map<String,String> Parse() :
    String subgenus;
    String species;
    String subspecies;
+   String infraspecies;
    String rank;
    String authorship;
    String subsequentcitation;
    HashMap<String,String> result = new HashMap<String,String>();
 }
 {
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
     genus = Genus()
     (
       t = <AUTHORSHIP>
@@ -119,6 +138,26 @@ Map<String,String> Parse() :
       result.put("Species",species); 
       if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
       result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
       return result ;
     }
   | 
@@ -144,7 +183,7 @@ Map<String,String> Parse() :
     genus = Genus()
     (
       t = <LWORD>
-      { species = t.toString(); } 
+      { species = t.toString();  } 
     )
     authorship = Authorship()
     <EOF>
@@ -180,7 +219,30 @@ Map<String,String> Parse() :
       return result ;
     }
   | 
-    //LOOKAHEAD(5)
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Infraspecies",infraspecies); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
     genus = Genus()
     (
       t = <LWORD>
@@ -197,6 +259,23 @@ Map<String,String> Parse() :
       result.put("Species",species); 
       result.put("Subspecies",subspecies); 
       result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
       return result ;
     }
   | 
@@ -252,7 +331,10 @@ Map<String,String> Parse() :
   | 
     genus = Genus()
     (
-      subgenus = Authorship()
+      (
+        t = <AUTHORSHIP>
+        { subgenus = t.toString(); } 
+      )
       { 
         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { 
            if (subgenus.matches("[(][A-Z][a-z]+[)].+")) {
