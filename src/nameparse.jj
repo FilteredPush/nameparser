@@ -51,7 +51,7 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > }
 TOKEN : { < LWORD : (<LOWER>)+ > }
 TOKEN : { < #LOWER : ["a"-"z"] > }
 TOKEN : { < #UPPER: ["A"-"Z"] > }
-TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." > }
+TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" > }
 TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
 TOKEN : { < YEAR : (["0"-"9"]){4} > }
 TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
@@ -73,7 +73,7 @@ TOKEN : { < AUTHORSHIP :
 |
 < #WORD : <UWORD> | <UALPHA>(<LALPHAPUNC>)+ |  <LALPHA>["'"]<UALPHA>(<LALPHAPUNC>)+ |  <UALPHA>["'"]<UALPHA>(<LALPHAPUNC>)+  > 
 |
-< #PREFIX : "von " | "[" >
+< #PREFIX : "von " | "[" | "De " | "de " >
 |
 < #SUFFIX : " II" | " III" | " et al." | "]" >
 |
