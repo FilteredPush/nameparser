@@ -25,7 +25,7 @@ PARSER_BEGIN(NameParse)
             try {
             while ((line = reader.readLine()) != null) {
                 try { 
-//System.out.println(line);
+                   line = line.replaceAll("\t"," ").replaceAll("\n"," ").replaceAll("\r"," ").trim();
                    NameParse parser = new NameParse( new ByteArrayInputStream(line.getBytes())) ;
                    Map<String,String> returnval = parser.Parse();
                    result.add(returnval) ;
@@ -46,10 +46,9 @@ PARSER_BEGIN(NameParse)
 PARSER_END(NameParse)
 
 TOKEN : { < HYBRID: "×" > }
-SKIP : { " " |  "\t" | "\r" | "\n" }
+SKIP : { " " }
 TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > }
 TOKEN : { < LWORD : (<LOWER>)+ > }
-TOKEN : { < #LOWER : ["a"-"z"] > }
 TOKEN : { < #UPPER: ["A"-"Z"] > }
 TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" > }
 TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
@@ -63,32 +62,29 @@ TOKEN : { < AUTHORSHIP :
 | 
 < #NAMESETYEAR : <NAMESET>(<YEARBIT>)*  >
 |
-< #NAMESET : <NAME><AND><NAME> | <NAME>((<COMMA>){0,1}([" "])*<NAME>)+<AND><NAME> | <NAME> > 
+< #AND : " & " | " and " | " et " | " in " | " ex " > 
 |
-< #NAME : 
-     (<INITIALS>){0,1}(<PREFIX>){0,1}<WORD>(<SUFFIX>){0,1}
-> 
+< #NAMESET : (<NAME><AND><NAME>)+ | (<NAME>((<COMMA>){0,1}([" "])*<NAME>)+<AND><NAME>)+ | <NAME> > 
+|
+< #NAME : (<INITIALS>){0,1}(<PREFIX>){0,1}<WORD>(<SUFFIX>){0,1}  > 
 |
 < #INITIALS : (<UPPER>(["."," "])+)+ >
 |
-< #WORD : <UWORD> | <UALPHA>(<LALPHAPUNC>)+ |  <LALPHA>["'"]<UALPHA>(<LALPHAPUNC>)+ |  <UALPHA>["'"]<UALPHA>(<LALPHAPUNC>)+  > 
+< #WORD : <UWORD> | <UALPHA>(<LALPHAPUNC>)+ |  (<LALPHA>|<UALPHA>)["'"]<UALPHA>(<LALPHAPUNC>)+  > 
 |
-< #PREFIX : "von " | "[" | "De " | "de " >
+< #PREFIX : "von " | "[" | ["D","d"]"e " >
 |
-< #SUFFIX : " II" | " III" | " et al." | "]" >
-|
-< #AND : " & " | " and " | " et " | " in " | " ex " > 
+< #SUFFIX : " I"(["I"])+ | " et al." | "]" >
 |
 < #COMMA : ","  > 
 | 
-< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Æ","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ù","Ú","Û","Ü","Ý"] > 
-//< #UALPHA : ["A"-"Z","Á"] > 
-//< #UALPHA : ["A"-"Z"] > 
+< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ù","Ú","Û","Ü"] > 
+|
+< #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
 < #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ñ","ò","ó","ô","õ","ö","ù","ú","û","ü","ý","ÿ"]  >
-|
-< #LALPHAPUNC : <LALPHA> | ["&",".","'","-"]  > 
 }
+TOKEN : { < #LOWER : ["a"-"z","-"] > }
 
 Map<String,String> Parse() :
 {  
