@@ -21,40 +21,77 @@ PARSER_BEGIN(NameParse)
    import java.io.InputStreamReader;
 
    class NameParse {
+
       public static void main( String[] args ) throws ParseException, TokenMgrError {
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             ArrayList<Map<String,String>> result = new ArrayList<Map<String,String>>();
             String line;
             try {
-            while ((line = reader.readLine()) != null) {
-                try { 
-                   line = line.replaceAll("\t"," ").replaceAll("\n"," ").replaceAll("\r"," ").trim();
-                   NameParse parser = new NameParse( new ByteArrayInputStream(line.getBytes())) ;
-                   Map<String,String> returnval = parser.Parse();
-                   result.add(returnval) ;
-                } catch (ParseException ex) { 
-                   System.out.println("Unable to parse: " + line );
-                } catch (TokenMgrError err) { 
-                   System.out.println("Unable to tokenize: " + line );
-                }
-            }
+               while ((line = reader.readLine()) != null) {
+                  result.add(NameParse.doParse(line));
+               }
             } catch (IOException e) { 
+               System.out.println(e.getMessage());
             }
             Iterator<Map<String,String>> i = result.iterator();
             while (i.hasNext()) { 
-               System.out.println(i.next());
+               Map<String,String> row = i.next();
+               if (!row.containsKey("Error")) {  row.remove("OriginalValue"); }
+               System.out.println(row);
             }
+      }
+
+     /**
+      * Parse a scientific name into its component parts.  
+      *
+      * @param line a scientific name to parse 
+      * @return a List of a Map of key value pairs describing components of the scientific name.
+      */
+     public static Map<String,String> doParse(String line) { 
+         Map<String,String> result = new HashMap<String,String>();
+         try { 
+             line = line.replaceAll("\t"," ").replaceAll("\n"," ").replaceAll("\r"," ").trim();
+             if (line.matches("^[a-z]+$")) {
+                  // One word, all lower case, a trivial epithet without it's genus. 
+                  result.put("Pathology","Bare Epithet" );
+                  result.put("Species",line); 
+                  result.put("OriginalValue",line);
+             } else { 
+                  ArrayList<String> extraneous =  new ArrayList<String>();
+                  extraneous.add(" nov sp.");
+                  extraneous.add("(\\?)");
+                  extraneous.add("\\?");
+                  Iterator<String> i = extraneous.iterator();
+                  String cleaned = line;
+                  while (i.hasNext()) { 
+                      String extra = i.next();
+                      cleaned = cleaned.replaceAll(extra,"");
+                  }
+                  NameParse parser = new NameParse( new ByteArrayInputStream(cleaned.getBytes())) ;
+                  result = parser.Parse();
+                  result.put("OriginalValue",line);
+             } 
+         } catch (ParseException ex) { 
+             result.put("Error","Unable to parse");
+             result.put("OriginalValue",line);
+             //System.out.println("Unable to parse: " + line );
+         } catch (TokenMgrError err) { 
+             result.put("Error","Unable to tokenize");
+             result.put("OriginalValue",line);
+             //System.out.println("Unable to tokenize: " + line );
          }
+         return result;
+     }
+
    }
 PARSER_END(NameParse)
 
 SKIP : { " " }
-TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
-<NOTSTARTOFLINE>SKIP : { " " }
+TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }<NOTSTARTOFLINE>SKIP : { " " }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }
 <NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < #UPPER: ["A"-"Z"] > }
-<NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" > }
+<NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" | "prol."  > }
 <NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
 <NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} > }
 <NOTSTARTOFLINE>TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
@@ -79,18 +116,18 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #PREFIX : "v"["o","a"]"n " | "[" | ["D","d"]"e "  | "de la " | "v"["a","o"]"n de"["n","r"]" " >
 |
-< #SUFFIX : " I"(["I"])+ | " et al." | "]" >
+< #SUFFIX : " I"(["I"])+ | " et al." | "]" | " f." >
 |
 < #COMMA : ","  > 
 | 
-< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ù","Ú","Û","Ü"] > 
+< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ù","Ú","Û","Ü","Ż"] >
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
-< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ñ","ò","ó","ô","õ","ö","ù","ú","û","ü","ý","ÿ","ç"]  >
+< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ň","ñ","ò","ó","ô","õ","ö","ø","ù","ú","û","ü","ý","ÿ","ç"]  >
 }
 
-Map<String,String> Parse() :
+protected Map<String,String> Parse() :
 {  
    Token t;
    String genus;
@@ -239,6 +276,104 @@ Map<String,String> Parse() :
       result.put("Species",species); 
       result.put("Subspecies",subspecies); 
       result.put("Infraspecies",infraspecies); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Infraspecies",infraspecies); 
+      result.put("Rank",rank); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Infraspecies",infraspecies); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Infraspecies",infraspecies); 
+      result.put("Rank",rank); 
       result.put("Authorship",authorship); 
       return result ;
     }
