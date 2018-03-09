@@ -59,17 +59,33 @@ PARSER_BEGIN(NameParse)
              } else { 
                   ArrayList<String> extraneous =  new ArrayList<String>();
                   extraneous.add(" nov sp.");
+                  extraneous.add(" nom. illeg.");
+                  extraneous.add(" nom. nud.");
+                  extraneous.add(" nomen nudem");
+                  extraneous.add(" nom. rej.");
+                  extraneous.add(" nom. cons.");
                   extraneous.add("(\\?)");
                   extraneous.add("\\?");
+                  extraneous.add("(pro sp.)");  // transfered from non-hybrid to hybrid
+                  extraneous.add("(pro hybr)."); // transfered from hybrid to non-hybrid)
+                  extraneous.add(" sp. indet.");
+                  extraneous.add(" sp.");
+                  extraneous.add(" spp. indet." );
+                  extraneous.add(" spp.");
                   Iterator<String> i = extraneous.iterator();
                   String cleaned = line;
+                  StringBuilder extraneousBits = new StringBuilder();
                   while (i.hasNext()) { 
                       String extra = i.next();
-                      cleaned = cleaned.replaceAll(extra,"");
+                      if (cleaned.contains(extra)) { 
+                         cleaned = cleaned.replace(extra,"");
+                         extraneousBits.append(extra).append(" ");
+                      }
                   }
                   NameParse parser = new NameParse( new ByteArrayInputStream(cleaned.getBytes())) ;
                   result = parser.Parse();
                   result.put("OriginalValue",line);
+                  if (extraneousBits.length()!=0) { result.put("RemovedExtra",extraneousBits.toString().trim()); } 
              } 
          } catch (ParseException ex) { 
              result.put("Error","Unable to parse");
@@ -87,13 +103,15 @@ PARSER_BEGIN(NameParse)
 PARSER_END(NameParse)
 
 SKIP : { " " }
-TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }<NOTSTARTOFLINE>SKIP : { " " }
+TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
+
+<NOTSTARTOFLINE>SKIP : { " " }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }
 <NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < #UPPER: ["A"-"Z"] > }
 <NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" | "prol."  > }
 <NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
-<NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} > }
+<NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} | "["(["0"-"9"]){4}"]" > }
 <NOTSTARTOFLINE>TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-"] > }
 <NOTSTARTOFLINE>TOKEN : { < AUTHORSHIP :
@@ -120,11 +138,11 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }<NOTSTARTOFLINE>SKIP : 
 |
 < #COMMA : ","  > 
 | 
-< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ù","Ú","Û","Ü","Ż"] >
+< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Š","Ù","Ú","Û","Ü","Ż"] >
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
-< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","è","é","ê","ë","ì","í","î","ï","ň","ñ","ò","ó","ô","õ","ö","ø","ù","ú","û","ü","ý","ÿ","ç"]  >
+< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ì","í","î","ï","ň","ñ","ò","ó","ô","õ","ö","ø","ù","ú","û","ü","ý","ÿ","ç"]  >
 }
 
 protected Map<String,String> Parse() :
@@ -374,6 +392,33 @@ protected Map<String,String> Parse() :
       result.put("Subspecies",subspecies); 
       result.put("Infraspecies",infraspecies); 
       result.put("Rank",rank); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
       result.put("Authorship",authorship); 
       return result ;
     }
