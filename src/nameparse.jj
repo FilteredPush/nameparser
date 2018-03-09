@@ -61,14 +61,18 @@ PARSER_BEGIN(NameParse)
                   extraneous.add(" nov sp.");
                   extraneous.add(" nom. illeg.");
                   extraneous.add(" nom. nud.");
+                  extraneous.add(" nom.nud.");
                   extraneous.add(" nomen nudem");
                   extraneous.add(" nom. rej.");
                   extraneous.add(" nom. cons.");
-                  extraneous.add("(\\?)");
-                  extraneous.add("\\?");
+                  extraneous.add(" nom. prov.");
+                  extraneous.add(" nom.prov.");
+                  extraneous.add("(?)");
+                  extraneous.add("?");
                   extraneous.add("(pro sp.)");  // transfered from non-hybrid to hybrid
                   extraneous.add("(pro hybr)."); // transfered from hybrid to non-hybrid)
                   extraneous.add(" sp. indet.");
+                  extraneous.add(" sp. ind.");
                   extraneous.add(" sp.");
                   extraneous.add(" spp. indet." );
                   extraneous.add(" spp.");
@@ -106,7 +110,7 @@ SKIP : { " " }
 TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 
 <NOTSTARTOFLINE>SKIP : { " " }
-<DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }  // multiplication sign
 <NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < #UPPER: ["A"-"Z"] > }
 <NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "forma" | "form" | "prol."  > }
@@ -126,11 +130,11 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 | 
 < #NAMESET: <NAME>((<AND>){0,1}<NAME>)* >
 |
-< #NAME : (<INITIALS>)*(<PREFIX>){0,1}<WORD>(<SUFFIX>){0,1} | <WORD>" "<WORD> > 
+< #NAME : (<INITIALS>)*(<PREFIX>){0,1}<WORD>([" ","-"]<WORD>)*(<SUFFIX>){0,1} > 
 |
 < #INITIALS : (<UPPER>(["."," "])+)+ >
 |
-< #WORD : <UWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'"]<UALPHA>(<LALPHAPUNC>)+  > 
+< #WORD : <LATERUWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'"]<UALPHA>(<LALPHAPUNC>)+  | (<UALPHA>)+ > 
 |
 < #PREFIX : "v"["o","a"]"n " | "[" | ["D","d"]"e "  | "de la " | "v"["a","o"]"n de"["n","r"]" " >
 |
@@ -142,8 +146,9 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
-< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ì","í","î","ï","ň","ñ","ò","ó","ô","õ","ö","ø","ù","ú","û","ü","ý","ÿ","ç"]  >
+< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ě","ì","í","î","ï","ň","ñ","ń","ò","ó","ô","õ","ö","ø","ù","ú","û","ü","ý","ÿ","ç"]  >
 }
+<NOTSTARTOFLINE>TOKEN : { < LATERUWORD : <UPPER>(<LOWER>)+ > }
 
 protected Map<String,String> Parse() :
 {  
@@ -157,6 +162,9 @@ protected Map<String,String> Parse() :
    String rank;
    String authorship;
    String subsequentcitation;
+   List<String> hgenera;
+   List<String> hspecies;
+   List<String> hsubspecies;
    HashMap<String,String> result = new HashMap<String,String>();
 }
 {
@@ -308,6 +316,28 @@ protected Map<String,String> Parse() :
       { subspecies = t.toString(); } 
     )
     (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Infraspecies",infraspecies); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
       t = <RANK>
       { rank = t.toString(); } 
     )
@@ -324,6 +354,33 @@ protected Map<String,String> Parse() :
       result.put("Infraspecies",infraspecies); 
       result.put("Rank",rank); 
       result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
+      result.put("Rank",rank); 
+      result.put("Infraspecies",infraspecies); 
       return result ;
     }
   | 
@@ -610,7 +667,7 @@ String Authorship() :
     )
     |
     (
-      t = <UWORD>
+      t = <LATERUWORD>
       { authorship = t.toString(); return authorship; } 
     )
 }
