@@ -386,6 +386,60 @@ protected Map<String,String> Parse() :
   | 
     genus = Genus()
     (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Rank",rank); 
+      result.put("Infraspecies",infraspecies); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { infraspecies = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      result.put("Species",species); 
+      result.put("Rank",rank); 
+      result.put("Infraspecies",infraspecies); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
       t = <AUTHORSHIP>
       {  
          subgenus = t.toString(); 
@@ -477,6 +531,31 @@ protected Map<String,String> Parse() :
       result.put("Species",species); 
       result.put("Subspecies",subspecies); 
       result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <AUTHORSHIP>
+      {  
+         subgenus = t.toString(); 
+         if (!subgenus.matches("[(][A-Z][a-z]+[)]")) { subgenus=""; } 
+      } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <LWORD>
+      { subspecies = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      if (subgenus.length()>0) { result.put("Subgenus",subgenus); }
+      result.put("Species",species); 
+      result.put("Subspecies",subspecies); 
       return result ;
     }
   | 
