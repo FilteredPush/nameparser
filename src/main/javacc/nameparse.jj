@@ -8,7 +8,7 @@ options {
    //DEBUG_TOKEN_MANAGER= true;
 }
 PARSER_BEGIN(NameParse)
-   // package org.filteredpush.sciname.parser;
+   package org.filteredpush.nameparser;
 
    import java.util.ArrayList;
    import java.util.List;
@@ -22,7 +22,7 @@ PARSER_BEGIN(NameParse)
 
    class NameParse {
 
-      public static void main( String[] args ) throws ParseException, TokenMgrError {
+      public static void main( String[] args ) throws ParseException, TokenMgrException {
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             ArrayList<Map<String,String>> result = new ArrayList<Map<String,String>>();
             String line;
@@ -119,7 +119,7 @@ PARSER_BEGIN(NameParse)
              result.put("Error","Unable to parse");
              result.put("OriginalValue",line);
              //System.out.println("Unable to parse: " + line );
-         } catch (TokenMgrError err) { 
+         } catch (TokenMgrException err) { 
              result.put("Error","Unable to tokenize");
              result.put("OriginalValue",line);
              //System.out.println("Unable to tokenize: " + line );
