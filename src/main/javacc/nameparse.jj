@@ -8,7 +8,7 @@ options {
    //DEBUG_TOKEN_MANAGER= true;
 }
 PARSER_BEGIN(NameParse)
-   package org.filteredpush.nameparser;
+   package org.filteredpush.nameparser.generated;
 
    import java.util.ArrayList;
    import java.util.List;
@@ -19,6 +19,7 @@ PARSER_BEGIN(NameParse)
    import java.io.BufferedReader;
    import java.io.ByteArrayInputStream;
    import java.io.InputStreamReader;
+   import org.filteredpush.nameparser.sciname.ScientificName;
 
    /** 
     * Class for parsing components of scientific names from strings,
@@ -32,7 +33,7 @@ PARSER_BEGIN(NameParse)
             String line;
             try {
                while ((line = reader.readLine()) != null) {
-                  result.add(NameParse.doParse(line));
+                  result.add(NameParse.parseToMap(line));
                }
             } catch (IOException e) { 
                System.out.println(e.getMessage());
@@ -45,13 +46,19 @@ PARSER_BEGIN(NameParse)
             }
       }
 
+     public static ScientificName parseToName(String scientificNameString) { 
+          Map<String,String> returnMap  = NameParse.parseToMap(scientificNameString);
+          ScientificName result = new ScientificName(returnMap);
+          return result;
+     }
+
      /**
       * Parse a scientific name into its component parts.  
       *
       * @param line a scientific name to parse 
       * @return a List of a Map of key value pairs describing components of the scientific name.
       */
-     public static Map<String,String> doParse(String line) { 
+     public static Map<String,String> parseToMap(String line) { 
          Map<String,String> result = new HashMap<String,String>();
          try { 
              line = line.replaceAll("\t"," ").replaceAll("\n"," ").replaceAll("\r"," ").trim();

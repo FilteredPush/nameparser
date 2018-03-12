@@ -58,9 +58,9 @@
 				<configuration>
 					<verbose>true</verbose>
 					<fork>true</fork>
-					<compilerVersion>1.7</compilerVersion>
-					<source>1.7</source>
-					<target>1.7</target>
+					<compilerVersion>1.8</compilerVersion>
+					<source>1.8</source>
+					<target>1.8</target>
 				</configuration>
 			</plugin>
             <plugin>
@@ -71,7 +71,7 @@
                   <archive>
                     <manifest>
                       <addClasspath>true</addClasspath>
-                      <mainClass>org.filteredpush.nameparser.NameParse</mainClass>
+                      <mainClass>org.filteredpush.nameparser.generated.NameParse</mainClass>
                     </manifest>
                   </archive>
                 </configuration>
