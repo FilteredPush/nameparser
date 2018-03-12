@@ -1,11 +1,26 @@
-/**
+/** ScientificName.java 
  * 
+ * Copyright 2018 President and Fellows of Harvard College
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
  */
 package org.filteredpush.nameparser.sciname;
 
 import java.util.Map;
 
 /**
+ * A class for representing components of a scientific name (for access to parse results from NameParse).
+ * 
  * @author mole
  *
  */
@@ -21,19 +36,89 @@ public class ScientificName {
 	private String infraspecificEpithet;
 	private String trivialEpithet;
 	private String authorship;
+	private String subsequentCitation;
 	private boolean hybrid;
 	private boolean namedHybrid;
 	private boolean structuredHybrid;
 	
-	private String cleanParse;
+	private boolean cleanParse;
 	private String pathology;
 	private String extraneousText;
 	private String errorMessage;
 	
-	public ScientificName(Map<String,String> parseResult) { 
+	private int epithetCount = 0;
+	
+	public ScientificName(Map<String,String> parseResult) {
+		cleanParse = true;
+		if (parseResult.containsKey("OriginalValue")) { 
+			originalStringValue = parseResult.get("OriginalValue");
+		}
+		
 		if (parseResult.containsKey("Genus")) { 
 			genericEpithet = parseResult.get("Genus");
+			epithetCount++;
 		}
+		if (parseResult.containsKey("Subgenus")) { 
+			subgenericEpithet = parseResult.get("Subgenus");
+			rank = "subgenus";
+			// epithet count is not incremented.
+		}
+		if (parseResult.containsKey("Species")) { 
+			specificEpithet = parseResult.get("Species");
+			trivialEpithet = specificEpithet;
+			rank = "species";
+			epithetCount++;
+		}
+		if (parseResult.containsKey("Subpecies")) { 
+			subspecificEpithet = parseResult.get("Subpecies");
+			trivialEpithet = subspecificEpithet;
+			rank = "subspecies";
+			epithetCount++;
+		}
+		if (parseResult.containsKey("Infraspecies")) { 
+			infraspecificEpithet = parseResult.get("Infraspecies");
+			trivialEpithet = infraspecificEpithet;
+			rank = "infrasubspecific";
+			epithetCount++;
+		}
+		if (parseResult.containsKey("Rank")) { 
+			rank = parseResult.get("Rank");
+		}
+		
+		if (parseResult.containsKey("Authorship")) { 
+			authorship = parseResult.get("Authorship");
+		}		
+		if (parseResult.containsKey("SubsequentCitation")) { 
+			subsequentCitation = parseResult.get("SubsequentCitation");
+		}		
+		if (parseResult.containsKey("NamedHybrid")) { 
+			if (parseResult.get("NamedHybrid").equalsIgnoreCase("true")) { 
+				namedHybrid = true;
+				hybrid = true;
+			}
+		}		
+		if (parseResult.containsKey("Hybrid")) { 
+			if (parseResult.get("Hybrid").equalsIgnoreCase("true")) { 
+				structuredHybrid = true;
+				hybrid = true;
+			}
+		}			
+		
+		if (parseResult.containsKey("RemovedExtra")) { 
+			extraneousText = parseResult.get("RemovedExtra");
+			cleanParse = false;
+		}
+		if (parseResult.containsKey("Error")) { 
+			errorMessage = parseResult.get("Error");
+			cleanParse = false;
+		}		
+		if (parseResult.containsKey("Pathology")) { 
+			pathology = parseResult.get("Pathology");
+			cleanParse = false;
+		}		
+		
+		//TODO: Support list of hybrid components/structured hybrid
+		
 	}
 
 	/**
@@ -118,6 +203,15 @@ public class ScientificName {
 	}
 
 	/**
+	 * Obtain the value for the subsequentCitation
+	 *
+	 * @return the subsequentCitation
+	 */
+	public String getSubsequentCitation() {
+		return subsequentCitation;
+	}
+
+	/**
 	 * Obtain the value for the hybrid
 	 *
 	 * @return the hybrid
@@ -149,7 +243,7 @@ public class ScientificName {
 	 *
 	 * @return the cleanParse
 	 */
-	public String getCleanParse() {
+	public boolean getCleanParse() {
 		return cleanParse;
 	}
 
