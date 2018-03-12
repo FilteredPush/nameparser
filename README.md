@@ -4,11 +4,31 @@ An experimental parser for scientific names using javacc.
 
 ## Obtain ##
 
-Not yet available from maven central.
+Available from maven central as: 
 
-Development snapshot available from: 
+     <dependency>
+         <groupId>org.filteredpush</groupId>
+         <artifactId>nameparser</artifactId>
+         <version>0.0.1</version>
+     </dependency>
 
-     https://oss.sonatype.org/content/repositories/snapshots/org/filteredpush/nameparser/0.0.1-SNAPSHOT/
+Development snapshots available from: 
+
+     https://oss.sonatype.org/content/repositories/snapshots/org/filteredpush/nameparser/
+
+## Using as a Java Library ##
+
+Include the jar (build instructions below) on your classpath, or add as a maven dependency then: 
+
+    import org.filteredpush.nameparser.generated.NameParse
+    import org.filteredpush.nameparser.sciname.ScientificName
+
+From the NameParse class you will want either the NameParse.parseToName(String scientificNameString) method which returns a ScientificName object for ease of handling, or NameParse.parseToMap(String scientificNameString) which returns a map of key value pairs, the keys of which may be unstable.
+
+Example invocation: 
+
+    ScientificName parsedName = NameParse.parseToName(String scientificNameString);
+    System.out.println(parsedName.getGenericEpithet());
 
 ## Build ##
 
@@ -24,8 +44,7 @@ Build a jar file:
 
 java -jar target/nameparser-0.0.1-SNAPSHOT.jar < testnameset.txt
 
-
-# Developer deployment: 
+# Developer deployment: # 
 
 To deploy a snapshot to the snapshotRepository:
 

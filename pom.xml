@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.filteredpush</groupId>
 	<artifactId>nameparser</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>nameparser</name>
 	<description>FilteredPush scientific name parser library.  A javacc based parser for scientific names.</description>
 	<url>https://wiki.filteredpush.org/</url>
