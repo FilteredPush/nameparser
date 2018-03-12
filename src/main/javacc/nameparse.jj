@@ -20,6 +20,10 @@ PARSER_BEGIN(NameParse)
    import java.io.ByteArrayInputStream;
    import java.io.InputStreamReader;
 
+   /** 
+    * Class for parsing components of scientific names from strings,
+    * Invoke with NameParse.doParse(scientificNameString).
+    */
    class NameParse {
 
       public static void main( String[] args ) throws ParseException, TokenMgrException {
