@@ -161,9 +161,10 @@ SKIP : { " " }
 TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 
 <NOTSTARTOFLINE>SKIP : { " " }
-<DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×" > }  // multiplication sign
-<NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "ssp." | "variety" | "var." | "var" | "nothovar" | "nothovar." | "nothof." | "f." | "fo." | "forma" | "form" | "prol."  > }
-<NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < HYBRID: "×">  }  // multiplication sign
+<NOTSTARTOFLINE>TOKEN : { < SPACEDHYBRID: " x " | " × " > :POSTHYBRID }  // multiplication sign or x with spaces
+<NOTSTARTOFLINE>TOKEN : { < RANK : "subspecies" | "subsp." | "ssp." | "variety" | "var." | "var" | "subvar." | "subvar" | "subvariety" | "nothovar" | "nothovar." | "nothof." | "f." | "fo." | "forma" | "form" | "subf." | "subf" | "subforma" | "lusus" | "modif." | "modif" | "modification" | "prol." | "prolus"  > }
+<POSTHYBRID,NOTSTARTOFLINE>TOKEN : { < LWORD : (<LOWER>)+ > :NOTSTARTOFLINE }
 <DEFAULT,NOTSTARTOFLINE>TOKEN : { < #UPPER: ["A"-"Z"] > }
 <NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
 <NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} | "["(["0"-"9"]){4}"]" > }
@@ -187,7 +188,7 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #INITIALS : (<UPPER>(["."," "])+)+ >
 |
-< #WORD : <LATERUWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'","’"]<UALPHA>(<LALPHAPUNC>)+  | (<UALPHA>)+  | "da" | "y" | "de" | "von" | "de la" > 
+< #WORD : <LATERUWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'","’"]<UALPHA>(<LALPHAPUNC>)+  | (<UALPHA>)+  | "da" | "y" | "de" | "von" | "de la"  > 
 |
 < #PREFIX : "v"["o","a"]"n " | "[" | ["D","d"]"e "  | "de la " | "v"["a","o"]"n de"["n","r"]" " >
 |
@@ -201,7 +202,8 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ě","ì","í","î","ï","ň","ñ","ń","ò","ó","ô","õ","ö","ø","ß","ù","ú","û","ü","ý","ÿ","ç"]  >
 }
-<NOTSTARTOFLINE>TOKEN : { < LATERUWORD : <UPPER>(<LOWER>)+ > }
+<POSTHYBRID,NOTSTARTOFLINE>TOKEN : { < LATERUWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
+<POSTHYBRID>TOKEN : { < GENUSABBREV : <UPPER>"." > :NOTSTARTOFLINE }
 
 protected Map<String,String> Parse() :
 {  
@@ -280,6 +282,25 @@ protected Map<String,String> Parse() :
     genus = Genus()
     (
       t = <HYBRID>
+      { namedHybrid = true; } 
+    )
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Authorship",authorship); 
+      result.put("NamedHybrid","true"); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <SPACEDHYBRID>
       { namedHybrid = true; } 
     )
     (
@@ -782,6 +803,144 @@ protected Map<String,String> Parse() :
       result.put("NamedHybrid","true"); 
       return result ;
     }
+  |
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <SPACEDHYBRID>
+      { 
+        namedHybrid = true; 
+        hgenera = new ArrayList<String>();
+        hgenera.add(genus);
+        hspecies= new ArrayList<String>();
+        hspecies.add(species);
+      } 
+    )
+    (
+      t = <LATERUWORD>
+      { hgenera.add(t.toString()); } 
+    )
+    (
+      t = <LWORD>
+      { hspecies.add(t.toString()); } 
+    )
+    <EOF>
+       { 
+         result.put("Hybrid","true"); 
+         result.put("Genus1",hgenera.get(0)); 
+         result.put("Genus2",hgenera.get(1)); 
+         result.put("Species1",hspecies.get(0)); 
+         result.put("Species2",hspecies.get(1)); 
+         return result ;
+       } 
+  |
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <SPACEDHYBRID>
+      { 
+        namedHybrid = true; 
+        hgenera = new ArrayList<String>();
+        hgenera.add(genus);
+        hspecies= new ArrayList<String>();
+        hspecies.add(species);
+      } 
+    )
+    (
+      t = <LATERUWORD>
+      { hgenera.add(t.toString()); } 
+    )
+    (
+      t = <LWORD>
+      { hspecies.add(t.toString()); } 
+    )
+    authorship = Authorship()
+    <EOF>
+       { 
+         result.put("Hybrid","true"); 
+         result.put("Genus1",hgenera.get(0)); 
+         result.put("Genus2",hgenera.get(1)); 
+         result.put("Species1",hspecies.get(0)); 
+         result.put("Species2",hspecies.get(1)); 
+         //TODO: Authorship2
+         if (authorship.length()>0) { result.put("Authorship",authorship); }
+         return result ;
+       } 
+  |
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <SPACEDHYBRID>
+      { 
+        namedHybrid = true; 
+        hgenera = new ArrayList<String>();
+        hgenera.add(genus);
+        hspecies= new ArrayList<String>();
+        hspecies.add(species);
+      } 
+    )
+    (
+      t = <GENUSABBREV>
+      { hgenera.add(t.toString()); } 
+    )
+    (
+      t = <LWORD>
+      { hspecies.add(t.toString()); } 
+    )
+    <EOF>
+       { 
+         result.put("Hybrid","true"); 
+         result.put("Genus1",hgenera.get(0)); 
+         result.put("Genus2",hgenera.get(1)); 
+         result.put("Species1",hspecies.get(0)); 
+         result.put("Species2",hspecies.get(1)); 
+         return result ;
+       } 
+  |
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <SPACEDHYBRID>
+      { 
+        namedHybrid = true; 
+        hgenera = new ArrayList<String>();
+        hgenera.add(genus);
+        hspecies= new ArrayList<String>();
+        hspecies.add(species);
+      } 
+    )
+    (
+      t = <GENUSABBREV>
+      { hgenera.add(t.toString()); } 
+    )
+    (
+      t = <LWORD>
+      { hspecies.add(t.toString()); } 
+    )
+    authorship = Authorship()
+    <EOF>
+       { 
+         result.put("Hybrid","true"); 
+         result.put("Genus1",hgenera.get(0)); 
+         result.put("Genus2",hgenera.get(1)); 
+         result.put("Species1",hspecies.get(0)); 
+         result.put("Species2",hspecies.get(1)); 
+         //TODO: Authorship2
+         if (authorship.length()>0) { result.put("Authorship",authorship); }
+         return result ;
+       } 
   |
     (
       t = <HYBRID>
