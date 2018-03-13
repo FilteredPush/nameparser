@@ -140,6 +140,17 @@ PARSER_BEGIN(NameParse)
                   NameParse parser = new NameParse( new ByteArrayInputStream(cleaned.trim().getBytes())) ;
                   result = parser.Parse();
                   result.put("OriginalValue",line);
+                  String accLetPat = ".*[ëï].*";
+                  if ((result.containsKey("Genus") && result.get("Genus").matches(accLetPat)) || 
+                      (result.containsKey("Species") && result.get("Species").matches(accLetPat)) || 
+                      (result.containsKey("Subspecies") && result.get("Subspecies").matches(accLetPat)) || 
+                      (result.containsKey("Infraspecies") &&result.get("Infraspecies").matches(accLetPat))) { 
+                       if (result.containsKey("Pathology")) { 
+                          result.put("Pathology",result.get("Pathology") + "|Accented characters in Scientific Name Contains");
+                       } else { 
+                          result.put("Pathology","Accented characters in Scientific Name");
+                       }
+                  }
                   if (extraneousBits.length()!=0) { result.put("RemovedExtra",extraneousBits.toString().trim()); } 
              } 
          } catch (ParseException ex) { 
@@ -169,7 +180,7 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 <NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
 <NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} | "["(["0"-"9"]){4}"]" > }
 <NOTSTARTOFLINE>TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
-<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-"] > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-","ë","ï"] > }
 <NOTSTARTOFLINE>TOKEN : { < AUTHORSHIP :
    "("<NAMESETYEAR>")"
    | <NAMESETYEAR>
@@ -196,7 +207,8 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #COMMA : ","  > 
 | 
-< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Š","Ù","Ú","Û","Ü","Ż"] >
+//< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ř","Š","Ù","Ú","Û","Ü","Ż"] >
+< #UALPHA : <UPPER> | ["À"-"Ö","Ø"-"ß","Ř","Š","Ù","Ú","Û","Ü","Ż"] >
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
