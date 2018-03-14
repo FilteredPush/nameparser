@@ -43,7 +43,7 @@ PARSER_BEGIN(NameParse)
     */
    class NameParse {
 
-      public static void main( String[] args ) throws ParseException, TokenMgrException {
+     public static void main( String[] args ) throws ParseException, TokenMgrException {
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             ArrayList<Map<String,String>> result = new ArrayList<Map<String,String>>();
             String line;
@@ -57,10 +57,11 @@ PARSER_BEGIN(NameParse)
             Iterator<Map<String,String>> i = result.iterator();
             while (i.hasNext()) { 
                Map<String,String> row = i.next();
-               if (!row.containsKey("Error")) {  row.remove("OriginalValue"); }
+               // Hide the original value in the output, unless relevant
+               if (!row.containsKey("ChangedValue") && !row.containsKey("Error")) {  row.remove("OriginalValue"); }
                System.out.println(row);
             }
-      }
+     }
 
      public static ScientificName parseToName(String scientificNameString) { 
           Map<String,String> returnMap  = NameParse.parseToMap(scientificNameString);
@@ -84,6 +85,12 @@ PARSER_BEGIN(NameParse)
                   result.put("Species",line); 
                   result.put("OriginalValue",line);
              } else { 
+                  String cleaned = line;
+                  if (cleaned.matches(".*\\(.*") && !cleaned.matches(".*\\).*")) {
+                      // 
+                      result.put("Pathology","Unmatched Parenthesis" );
+                      cleaned = cleaned.trim() + ")";
+                  }
                   ArrayList<String> extraneous =  new ArrayList<String>();
                   extraneous.add(" n. sp.");
                   extraneous.add(" nov sp.");
@@ -107,7 +114,6 @@ PARSER_BEGIN(NameParse)
                   extraneous.add(" spp. indet." );
                   extraneous.add(" spp.");
                   Iterator<String> i = extraneous.iterator();
-                  String cleaned = line;
                   StringBuilder extraneousBits = new StringBuilder();
                   while (i.hasNext()) { 
                       String extra = i.next();
@@ -137,9 +143,12 @@ PARSER_BEGIN(NameParse)
                       if (extraneousBits.length()>0) { extraneousBits.append("|"); } 
                       extraneousBits.append(yearLetter);
                   }
+                  result.put("OriginalValue",line);
+                  if (!line.equals(cleaned)) { 
+                      result.put("CheckedValue",cleaned);
+                  }
                   NameParse parser = new NameParse( new ByteArrayInputStream(cleaned.trim().getBytes())) ;
                   result = parser.Parse();
-                  result.put("OriginalValue",line);
                   String accLetPat = ".*[ëï].*";
                   if ((result.containsKey("Genus") && result.get("Genus").matches(accLetPat)) || 
                       (result.containsKey("Species") && result.get("Species").matches(accLetPat)) || 
@@ -180,7 +189,7 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 <NOTSTARTOFLINE>TOKEN : { < SUBSEQUENTCITATION : ": "<NAMESET>((<COMMA>){0,1}([" "])*<YEAR>){0,1} > }
 <NOTSTARTOFLINE>TOKEN : { < YEAR : (["0"-"9"]){4} | "["(["0"-"9"]){4}"]" > }
 <NOTSTARTOFLINE>TOKEN : { < YEARBIT : (<COMMA>){0,1}([" "])*<YEAR> > }
-<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-","ë","ï"] > }
+<DEFAULT,NOTSTARTOFLINE>TOKEN : { < #LOWER : ["a"-"z","-","ë","ï","ü"] > }
 <NOTSTARTOFLINE>TOKEN : { < AUTHORSHIP :
    "("<NAMESETYEAR>")"
    | <NAMESETYEAR>
@@ -201,18 +210,19 @@ TOKEN : { < UWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 |
 < #WORD : <LATERUWORD> | (<UALPHA>(<LALPHAPUNC>)+)+ |  (<LALPHA>|<UALPHA>)["'","’"]<UALPHA>(<LALPHAPUNC>)+  | (<UALPHA>)+  | "da" | "y" | "de" | "von" | "de la"  > 
 |
-< #PREFIX : "v"["o","a"]"n " | "[" | ["D","d"]"e "  | "de la " | "v"["a","o"]"n de"["n","r"]" " >
+< #PREFIX : ["V","v"]["o","a"]"n " | "[" | ["D","d"]"e "  | ["D","d"]"e la " | ["V","v"]["a","o"]"n de"["n","r","m"]" " >
 |
-< #SUFFIX : " I"(["I"])+ | " et al." | "]" | " f." >
+< #SUFFIX : " I"(["I"])+ | " et al"("")? | "]" | " f." >
 |
 < #COMMA : ","  > 
 | 
 //< #UALPHA : <UPPER> | ["À","Á","Â","Ã","Ä","Å","Ç","È","É","Ê","Ë","Ì","Í","Î","Ï","Ñ","Ò","Ó","Ô","Õ","Ö","Ø","Ř","Š","Ù","Ú","Û","Ü","Ż"] >
-< #UALPHA : <UPPER> | ["À"-"Ö","Ø"-"ß","Ř","Š","Ù","Ú","Û","Ü","Ż"] >
+< #UALPHA : <UPPER> | ["À"-"Ö","Ø"-"ß","Ř","Š","Ś","Ù","Ú","Û","Ü","Ż"] >
 |
 < #LALPHAPUNC : <LALPHA> | ["&",".","'"]  > 
 |
-< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ě","ì","í","î","ï","ň","ñ","ń","ò","ó","ô","õ","ö","ø","ß","ù","ú","û","ü","ý","ÿ","ç"]  >
+//< #LALPHA : <LOWER> | ["à","á","â","ã","ä","å","æ","č","ć","è","é","ê","ë","ě","ì","í","î","ï","ň","ñ","ń","ò","ó","ô","õ","ö","ø","ß","ù","ú","û","ü","ý","ÿ","ç"]  >
+< #LALPHA : <LOWER> | ["à"-"ö","ø","ň","ń","ß","ù","ú","û","ü","ý","ÿ","č","ć","ě","š"] >
 }
 <POSTHYBRID,NOTSTARTOFLINE>TOKEN : { < LATERUWORD : <UPPER>(<LOWER>)+ > :NOTSTARTOFLINE }
 <POSTHYBRID>TOKEN : { < GENUSABBREV : <UPPER>"." > :NOTSTARTOFLINE }
@@ -338,6 +348,19 @@ protected Map<String,String> Parse() :
     <EOF>
     { 
       result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Authorship",authorship); 
+      return result ;
+    }
+  | 
+    (
+      t = <LWORD>
+      { species = t.toString();  } 
+    )
+    authorship = Authorship()
+    <EOF>
+    { 
+      result.put("Pathology","Bare Epithet" );
       result.put("Species",species); 
       result.put("Authorship",authorship); 
       return result ;
@@ -489,6 +512,23 @@ protected Map<String,String> Parse() :
       result.put("Species",species); 
       result.put("Rank",rank); 
       result.put("Infraspecies",infraspecies); 
+      return result ;
+    }
+  | 
+    genus = Genus()
+    (
+      t = <LWORD>
+      { species = t.toString(); } 
+    )
+    (
+      t = <RANK>
+      { rank = t.toString(); } 
+    )
+    <EOF>
+    { 
+      result.put("Genus",genus);
+      result.put("Species",species); 
+      result.put("Compare",rank); 
       return result ;
     }
   | 

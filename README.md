@@ -40,6 +40,11 @@ Build a jar file:
 
     mvn clean process-resorces install
 
+For debugging changes to the javacc file, it may be desirable to invoke javacc directly (and possibly also invoke javac directly): 
+
+     javacc -OUTPUT_DIRECTORY=target/generated-sources/javacc/org/filteredpush/nameparser/generated/ src/main/javacc/nameparse.jj
+     javac -cp target/nameparser-0.0.2-SNAPSHOT.jar -d target/classes/org/filteredpush/nameparser/generated/ target/generated-sources/javacc/org/filteredpush/nameparser/generated/*.java
+
 ## Run ##
 
 java -jar target/nameparser-0.0.1-SNAPSHOT.jar < testnameset.txt
