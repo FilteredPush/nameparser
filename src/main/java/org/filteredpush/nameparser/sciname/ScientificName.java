@@ -16,6 +16,10 @@
  */
 package org.filteredpush.nameparser.sciname;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +31,7 @@ import java.util.Map;
 public class ScientificName {
 
 	private String originalStringValue;
+	private String checkedStringValue;
 	
 	private String genericEpithet;
 	private String subgenericEpithet;
@@ -42,17 +47,24 @@ public class ScientificName {
 	private boolean structuredHybrid;
 	
 	private boolean cleanParse;
-	private String pathology;
+	private List<String> pathologies;
 	private String extraneousText;
 	private String errorMessage;
+	
+	private List<ScientificName> hybridElements;
 	
 	private int epithetCount = 0;
 	
 	public ScientificName(Map<String,String> parseResult) {
+		pathologies = new ArrayList<String>();
+		hybridElements = new ArrayList<ScientificName>();
 		cleanParse = true;
 		if (parseResult.containsKey("OriginalValue")) { 
 			originalStringValue = parseResult.get("OriginalValue");
 		}
+		if (parseResult.containsKey("CheckedValue")) { 
+			checkedStringValue = parseResult.get("CheckedValue");
+		}		
 		
 		if (parseResult.containsKey("Genus")) { 
 			genericEpithet = parseResult.get("Genus");
@@ -101,6 +113,38 @@ public class ScientificName {
 			if (parseResult.get("Hybrid").equalsIgnoreCase("true")) { 
 				structuredHybrid = true;
 				hybrid = true;
+				String genericBit = "";
+				for (int i=1; i<3; i++) { 
+				    Map<String,String> bits = new HashMap<String,String>();
+				    String key = "Genus"+Integer.toString(i);
+				    if (parseResult.containsKey(key)) { 
+				    	bits.put("Genus", bits.get(key));
+				    	genericBit = "";
+				    } else {
+				    	if (i>1) { 
+				    		if (genericBit.length()>0) { 
+				    	        bits.put("Genus", genericBit);
+				    		} else { 
+				    	        bits.put("Genus", genericEpithet);
+				    		}
+				    	}
+				    }
+				    key = "Species"+Integer.toString(i);
+				    if (parseResult.containsKey(key)) { 
+				    	bits.put("Species", bits.get(key));
+				    }		
+				    key = "Subspecies"+Integer.toString(i);
+				    if (parseResult.containsKey(key)) { 
+				    	bits.put("Subspecies", bits.get(key));
+				    }		
+				    key = "Authorship"+Integer.toString(i);
+				    if (parseResult.containsKey(key)) { 
+				    	bits.put("Authorship", bits.get(key));
+				    }
+				    ScientificName child = new ScientificName(bits);
+				    hybridElements.add(child);
+				}
+				
 			}
 		}			
 		
@@ -113,7 +157,12 @@ public class ScientificName {
 			cleanParse = false;
 		}		
 		if (parseResult.containsKey("Pathology")) { 
-			pathology = parseResult.get("Pathology");
+			String pathology = parseResult.get("Pathology");
+			if (pathology.contains("|")) { 
+			   pathologies.addAll(Arrays.asList(pathology.split("|")));
+			} else { 
+				pathologies.add(pathology);
+			}
 			cleanParse = false;
 		}		
 		
@@ -243,7 +292,7 @@ public class ScientificName {
 	 *
 	 * @return the cleanParse
 	 */
-	public boolean getCleanParse() {
+	public boolean isCleanParse() {
 		return cleanParse;
 	}
 
@@ -253,7 +302,7 @@ public class ScientificName {
 	 * @return the pathology
 	 */
 	public String getPathology() {
-		return pathology;
+		return pathologies.toString();
 	}
 
 	/**
@@ -273,5 +322,47 @@ public class ScientificName {
 	public String getErrorMessage() {
 		return errorMessage;
 	}
+
+	/**
+	 * Obtain the number of epithets composing the name (generic, specific, and below),
+	 * not including subgenus.
+	 *
+	 * @return the epithetCount
+	 */
+	public int getEpithetCount() {
+		return epithetCount;
+	}
 	
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+		if (cleanParse) { 
+			if (this.genericEpithet!=null) { result.append(genericEpithet).append(" "); } 
+			if (this.specificEpithet!=null) { result.append(specificEpithet).append(" "); } 
+			if (this.subspecificEpithet!=null) { result.append(subspecificEpithet).append(" "); } 
+			if (this.infraspecificEpithet!=null) { result.append(infraspecificEpithet).append(" "); } 
+			if (this.authorship!=null) { result.append(authorship); } 
+		} else { 
+			result.append("Problem Parsing: ").append(this.originalStringValue);
+		}
+		return result.toString().trim();
+	}
+	
+	public String toCanonicalName() { 
+		StringBuilder result = new StringBuilder();
+		if (cleanParse) { 
+			if (this.genericEpithet!=null) { result.append(genericEpithet).append(" "); } 
+			if (this.specificEpithet!=null) { result.append(specificEpithet).append(" "); } 
+			if (this.subspecificEpithet!=null) { 
+			    if (this.rank!=null && this.infraspecificEpithet==null) { result.append(rank).append(" "); } 
+				result.append(subspecificEpithet).append(" "); 
+			} 
+			if (this.infraspecificEpithet!=null) { 
+			    if (this.rank!=null) { result.append(rank).append(" "); } 
+				result.append(infraspecificEpithet).append(" "); } 
+			if (this.authorship!=null) { result.append(authorship); } 
+		} else { 
+			result.append(this.originalStringValue);
+		}
+		return result.toString().trim();		
+	}
 }
