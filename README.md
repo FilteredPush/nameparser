@@ -9,7 +9,7 @@ Available from maven central as:
      <dependency>
          <groupId>org.filteredpush</groupId>
          <artifactId>nameparser</artifactId>
-         <version>0.0.1</version>
+         <version>0.0.2</version>
      </dependency>
 
 Development snapshots available from: 
